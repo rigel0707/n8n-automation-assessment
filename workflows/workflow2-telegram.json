@@ -1,0 +1,539 @@
+{
+  "name": "Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cc2795d7-bc46-4c3d-9036-30f4c684bb4f",
+      "name": "Telegram Trigger",
+      "webhookId": "8f5bd866-99a1-4073-bb85-2fbd001e064f",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZhB0CnRgZYBk0X0v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[$json.message.photo.length - 1].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0dd29aa3-f01d-438f-b404-3db2c75918a1",
+      "name": "Get a file",
+      "webhookId": "600f103d-2e77-4185-b625-09ea187f3655",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZhB0CnRgZYBk0X0v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.6-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.6-flash"
+        },
+        "text": "Analyze this receipt image and extract the receipt information.\n\nReturn ONLY valid JSON with this exact structure:\n\n{\n  \"merchant_name\": \"\",\n  \"transaction_date\": \"\",\n  \"total_amount\": null,\n  \"currency\": \"\",\n  \"receipt_number\": \"\",\n  \"payment_method\": \"\"\n}\n\nRules:\n- merchant_name: business or store name.\n- transaction_date: use YYYY-MM-DD format.\n- total_amount: numeric value only, without currency symbols or commas.\n- currency: use ISO currency code such as PHP, USD, EUR.\n- receipt_number: receipt, invoice, OR number if visible; otherwise null.\n- payment_method: cash, credit card, debit card, e-wallet, or other if visible; otherwise null.\n- Do not guess values that are not visible.\n- For unavailable fields, return null.\n- Do not include Markdown.\n- Do not wrap the response in ```json.\n- Return only the JSON object.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "cde0dc6e-5fb0-4763-9c29-7b48a396e0bd",
+      "name": "Analyze an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SpU3ysBuB9d9TunE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://script.google.com/macros/s/AKfycbxeGFOJ4CyHlkH4zXJ-KvM_8D92RoIunqt7ZXQ3GcsplwIQgtddwRrNlOvnweeB6ve5/exec",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "secret",
+              "value": "97dc4b52520941e9d3fb6c0dc64076d430d5cbab6fec2d61d972571673c29e83"
+            },
+            {
+              "name": "merchant_name",
+              "value": "={{ $json.merchant_name }}"
+            },
+            {
+              "name": "transaction_date",
+              "value": "={{ $json.transaction_date }}"
+            },
+            {
+              "name": "total_amount",
+              "value": "={{ $json.total_amount }}"
+            },
+            {
+              "name": "currency",
+              "value": "={{ $json.currency }}"
+            },
+            {
+              "name": "receipt_number",
+              "value": "={{ $json.receipt_number }}"
+            },
+            {
+              "name": "payment_method",
+              "value": "={{ $json.payment_method }}"
+            },
+            {
+              "name": "action",
+              "value": "save_receipt"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "0af183dd-ee1f-4f53-a706-c6e40ca736bb",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const buffer =\n  await this.helpers.getBinaryDataBuffer(0, 'data');\n\nconst binary = $input.first().binary.data;\n\nreturn [\n  {\n    json: {\n      action: 'upload_receipt',\n      file_base64: buffer.toString('base64'),\n      file_name:\n        binary.fileName || `receipt-${Date.now()}.jpg`,\n      mime_type:\n        binary.mimeType || 'image/jpeg'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -192
+      ],
+      "id": "4b3d1bd5-8d20-4fb5-a479-f390c83cac39",
+      "name": "Prepare Drive Upload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://script.google.com/macros/s/AKfycbxeGFOJ4CyHlkH4zXJ-KvM_8D92RoIunqt7ZXQ3GcsplwIQgtddwRrNlOvnweeB6ve5/exec",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "={{ $json.action }}"
+            },
+            {
+              "name": "secret",
+              "value": "97dc4b52520941e9d3fb6c0dc64076d430d5cbab6fec2d61d972571673c29e83"
+            },
+            {
+              "name": "file_base64",
+              "value": "={{ $json.file_base64 }}"
+            },
+            {
+              "name": "file_name",
+              "value": "={{ $json.file_name }}"
+            },
+            {
+              "name": "mime_type",
+              "value": "={{ $json.mime_type }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        -192
+      ],
+      "id": "f2702de9-81d4-43e2-9bcb-615301ac2d3a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2bd0ad0e-756d-42af-a841-a54cf39c3d04",
+              "leftValue": "={{ Array.isArray($json.message?.photo) && $json.message.photo.length > 0 }}",
+              "rightValue": "={{ Array.isArray($json.message?.photo) && $json.message.photo.length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "08bcb2f2-0bc1-40cb-8395-97501ae4710d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb48f643-6a04-454c-9869-23cbf5fed73f",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -192
+      ],
+      "id": "2dad0207-e40c-417b-a73c-fcd9f58f8acb",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cc468e70-2e6e-400e-8634-3efea3fb0c4b",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "5eaf8281-4c89-4885-92be-c875b57d61fe",
+      "name": "If2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        -192
+      ],
+      "id": "843d1bcb-773d-4385-9182-c8ec018c8444",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $json.content.parts[0].text;\n\ntext = text\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\nconst receipt = JSON.parse(text);\n\nreturn {\n  json: receipt\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "441c8c2f-b0e4-4da3-9edc-cc862f958815",
+      "name": "Parse Receipt JSON"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "📷 Please send a receipt photo for processing.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        208
+      ],
+      "id": "aea29a87-ca4d-42bd-ac91-3c93adec54e3",
+      "name": "No image Message",
+      "webhookId": "99344b92-83e1-454f-82c5-2254d78fa2be",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZhB0CnRgZYBk0X0v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ `✅ Receipt processed successfully\n\nMerchant: ${$('Parse Receipt JSON').first().json.merchant_name}\nAmount: ${$('Parse Receipt JSON').first().json.currency} ${$('Parse Receipt JSON').first().json.total_amount}\nDate: ${$('Parse Receipt JSON').first().json.transaction_date}\nReceipt #: ${$('Parse Receipt JSON').first().json.receipt_number}` }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1696,
+        -192
+      ],
+      "id": "e7590b0f-b514-4107-9e97-275478b1df29",
+      "name": "Success Message",
+      "webhookId": "61dbee01-6ce8-4dc5-b29a-c99b0d4cab2f",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZhB0CnRgZYBk0X0v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=❌ Receipt processing failed.  \nPlease try sending the receipt again.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "9c65b319-ba0f-4061-9d97-c1bb85f792f3",
+      "name": "Error Message",
+      "webhookId": "afea96e3-4b74-4170-a8d4-b8e1929df3ef",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZhB0CnRgZYBk0X0v",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Parse Receipt JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No image Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Receipt JSON": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9d471737-1b30-4c04-84b6-c5e96fcbcb7c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7434ef9d1e3ed773a637c46e8cc4726bd8c318ed6b106b19da255ed28acf5a8f"
+  },
+  "nodeGroups": [],
+  "id": "cMHrPuJtl8KuZ3aX",
+  "tags": []
+}

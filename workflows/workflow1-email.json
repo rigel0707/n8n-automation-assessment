@@ -1,0 +1,188 @@
+{
+  "name": "Workflow 1 - Gmail to Sheets and Drive (Apps Script)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "fcc49558-2128-4958-9079-f8a25f4c07e5",
+      "name": "Schedule - Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "553b921a-d056-45dc-8a91-b1e21f9e2a54",
+      "name": "Manual Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      appsScriptUrl: \"https://script.google.com/macros/s/AKfycbxeGFOJ4CyHlkH4zXJ-KvM_8D92RoIunqt7ZXQ3GcsplwIQgtddwRrNlOvnweeB6ve5/exec\",\n      apiSecret: \"YOUR_API_SECRET\",\n      labels: [\n        \"Assessment-Label-1\",\n        \"Assessment-Label-2\",\n        \"Assessment-Label-3\"\n      ],\n      processedLabel: \"n8n-processed\",\n      driveRootFolderName: \"n8n Gmail Attachments\",\n      spreadsheetName: \"n8n Gmail Automation\",\n      sheetName: \"Email Log\"\n    }\n  }\n];"
+      },
+      "id": "969b6afb-3f56-44fa-985d-589974afb970",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        220
+      ],
+      "notes": "Replace YOUR_API_SECRET with the Script Property API_SECRET used by the Apps Script. Change labels/folder/sheet names here if needed."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.appsScriptUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  action: \"process_gmail\",\n  secret: $json.apiSecret,\n  labels: $json.labels,\n  processed_label: $json.processedLabel,\n  drive_root_folder_name: $json.driveRootFolderName,\n  spreadsheet_name: $json.spreadsheetName,\n  sheet_name: $json.sheetName\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "5dd8ed60-afc6-49f7-aa66-15c8cb2f53ef",
+      "name": "Apps Script - Process Gmail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -160,
+        220
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Calls the supplied Apps Script Web App. Apps Script must implement action=process_gmail and return JSON with success:true/false."
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json?.body ?? $json;\n\nif (!response || response.success !== true) {\n  const message =\n    response?.error ||\n    response?.message ||\n    \"Apps Script returned an unsuccessful or invalid response.\";\n\n  throw new Error(`Gmail automation failed: ${message}`);\n}\n\nreturn [\n  {\n    json: {\n      success: true,\n      message: response.message || \"Gmail automation completed successfully.\",\n      processed: response.processed ?? response.emails_processed ?? 0,\n      attachments_uploaded: response.attachments_uploaded ?? 0,\n      skipped: response.skipped ?? 0,\n      errors: response.errors ?? [],\n      processed_at: new Date().toISOString(),\n      apps_script_response: response\n    }\n  }\n];"
+      },
+      "id": "619b4024-82b9-4995-93eb-cb9c8114aab0",
+      "name": "Validate Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        220
+      ],
+      "notes": "Throws a real n8n execution error if Apps Script returns success:false or an invalid response."
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({\n  json: {\n    status: \"SUCCESS\",\n    message: item.json.message,\n    emails_processed: item.json.processed,\n    attachments_uploaded: item.json.attachments_uploaded,\n    skipped: item.json.skipped,\n    processed_at: item.json.processed_at,\n    errors: item.json.errors\n  }\n}));"
+      },
+      "id": "22d59593-eb88-47a5-9365-79add4fa2993",
+      "name": "Execution Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Workflow 1 — Gmail → Sheets + Drive via Apps Script\n\n**Before testing**\n1. Update `YOUR_API_SECRET` in **Config**.\n2. Make sure Apps Script supports `action: process_gmail`.\n3. Create/rename the three Gmail labels as needed.\n4. Apps Script should:\n   - search each configured label\n   - skip messages already labeled `n8n-processed`\n   - log email metadata to Google Sheets\n   - save attachments as `Label / YYYY-MM-DD / Sender / original filename`\n   - add `n8n-processed` only after successful processing\n5. Import the separate Error Handler workflow and select it under this workflow's **Settings → Error Workflow**.\n\nThe Apps Script URL is temporarily embedded in this workflow as requested."
+      },
+      "id": "b72ad27c-37c9-4499-8d10-d8abf6cd68ba",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -220
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule - Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Apps Script - Process Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apps Script - Process Gmail": {
+      "main": [
+        [
+          {
+            "node": "Validate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Response": {
+      "main": [
+        [
+          {
+            "node": "Execution Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}
