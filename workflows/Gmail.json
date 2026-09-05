@@ -1,0 +1,263 @@
+{
+  "name": "Gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7f0fbfd4-88be-4318-8d2d-b711f9872ca0",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yqFu67NB56xYtSac",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a5c47ff1-8262-4260-ab98-861c7b9df99d",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "saulmariahangelaa@gmail.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b89e4d20-b8a5-4182-ace9-5fd85c45fd63",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "hello, u are okay",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "c0bd966d-4ca0-4d56-b047-9e7cbc94a3ca",
+      "name": "Reply to a message",
+      "webhookId": "53e61b00-53a1-4e9b-adb2-ecfb5668af5a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yqFu67NB56xYtSac",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "hello, u are not okay",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        96
+      ],
+      "id": "51bfa43f-17ab-4b9b-95f4-efbc1612ccc9",
+      "name": "Reply to a message1",
+      "webhookId": "0a0cb5e1-8038-4bff-be24-7549cfb09487",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yqFu67NB56xYtSac",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e9cb5ea5-cf52-4800-b120-776d54f84a0d",
+              "leftValue": "={{ $('Gmail Trigger').item.json.snippet }}",
+              "rightValue": "job",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        96
+      ],
+      "id": "55c28584-c00c-4346-8e55-7d133f67edee",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "u got a job",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "31b0588b-cdaf-4d98-a986-3470ffcac42d",
+      "name": "Reply to a message2",
+      "webhookId": "d9dfda89-b6eb-4def-aebf-151e608b691a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yqFu67NB56xYtSac",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "u dont have a job",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        192
+      ],
+      "id": "6ce47dc9-36ee-41a9-a013-57a1955447d7",
+      "name": "Reply to a message3",
+      "webhookId": "ef440f70-ddfc-4fa9-a878-e71a964133da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yqFu67NB56xYtSac",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply to a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply to a message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "16d8e701-703b-42db-a7bc-ae8f1fca408f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c6ddc0fe0e6a96265be6f6e2df8ad01a470b8a511b8b36b57a9a4553232a1256"
+  },
+  "nodeGroups": [],
+  "id": "ovqKVXDg8LPBrEKU",
+  "tags": []
+}
